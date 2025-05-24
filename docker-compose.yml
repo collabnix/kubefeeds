@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  kubefeeds:
+    build: .
+    # Or use the pre-built image:
+    # image: collabnix/kubefeeds:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - kubefeeds-data:/app/data
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/stats"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Add nginx for production
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./ssl:/etc/ssl/certs
+    depends_on:
+      - kubefeeds
+    restart: unless-stopped
+
+volumes:
+  kubefeeds-data:
+    driver: local
+
+# Optional: Add networks for better isolation
+networks:
+  default:
+    name: kubefeeds-network
