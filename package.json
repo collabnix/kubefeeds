@@ -1,0 +1,34 @@
+{
+  "name": "kubefeeds",
+  "version": "1.0.0",
+  "description": "Kubernetes news aggregator portal",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "setup": "mkdir -p public && cp index.html public/",
+    "postinstall": "npm run setup"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "rss-parser": "^3.13.0",
+    "sqlite3": "^5.1.6",
+    "node-cron": "^3.0.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": [
+    "kubernetes",
+    "rss",
+    "news",
+    "aggregator",
+    "feeds"
+  ],
+  "author": "Collabnix",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
