@@ -6,7 +6,6 @@ on:
   pull_request:
     branches: [ main ]
   schedule:
-    # Run every 6 hours to keep feeds updated
     - cron: '0 */6 * * *'
   workflow_dispatch:
     inputs:
@@ -52,7 +51,7 @@ jobs:
         # Create basic index.html if missing
         if [ ! -f "public/index.html" ]; then
           echo "Creating basic frontend file..."
-          cat > public/index.html << 'EOF'
+          cat > public/index.html << 'HTMLEOF'
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -60,15 +59,25 @@ jobs:
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KubeFeeds - Kubernetes News Aggregator</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; 
-               background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-               color: white; min-height: 100vh; }
-        .container { max-width: 800px; margin: 0 auto; text-align: center; padding: 50px 20px; }
+        body { 
+            font-family: Arial, sans-serif; margin: 0; padding: 20px; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            color: white; min-height: 100vh; 
+        }
+        .container { 
+            max-width: 800px; margin: 0 auto; text-align: center; padding: 50px 20px; 
+        }
         .loading { margin: 30px 0; }
-        .spinner { display: inline-block; width: 40px; height: 40px; border: 4px solid rgba(255,255,255,.3); 
-                   border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite; }
+        .spinner { 
+            display: inline-block; width: 40px; height: 40px; 
+            border: 4px solid rgba(255,255,255,.3); border-radius: 50%; 
+            border-top-color: #fff; animation: spin 1s ease-in-out infinite; 
+        }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .stats { display: flex; justify-content: center; gap: 40px; margin: 40px 0; flex-wrap: wrap; }
+        .stats { 
+            display: flex; justify-content: center; gap: 40px; 
+            margin: 40px 0; flex-wrap: wrap; 
+        }
         .stat { text-align: center; }
         .stat-number { font-size: 2rem; font-weight: bold; }
         .stat-label { font-size: 1rem; opacity: 0.8; }
@@ -123,15 +132,12 @@ jobs:
             }
         }
         
-        // Load stats after a short delay
         setTimeout(loadStats, 2000);
-        
-        // Auto-refresh every 30 seconds
         setInterval(loadStats, 30000);
     </script>
 </body>
 </html>
-EOF
+HTMLEOF
           echo "? Created public/index.html"
         else
           echo "? public/index.html exists"
@@ -148,7 +154,6 @@ EOF
           console.log('? Version:', pkg.version);
           console.log('? Dependencies:', Object.keys(pkg.dependencies || {}).length);
           
-          // Check required dependencies
           const required = ['express', 'cors', 'rss-parser', 'sqlite3', 'node-cron'];
           const missing = required.filter(dep => !pkg.dependencies[dep]);
           
@@ -170,28 +175,14 @@ EOF
       run: |
         echo "=== Testing Core Functionality ==="
         
-        # Test RSS parsing capability
         node -e "
           const Parser = require('rss-parser');
           const parser = new Parser();
           console.log('? RSS parser module loaded');
           
-          // Test parsing with a simple feed
-          const testFeed = {
-            title: 'Test Feed',
-            items: [{title: 'Test Item', link: 'http://example.com'}]
-          };
-          console.log('? RSS parsing functionality ready');
-        "
-        
-        # Test database module
-        node -e "
           const sqlite3 = require('sqlite3');
           console.log('? SQLite3 module loaded');
-        "
-        
-        # Test express module
-        node -e "
+          
           const express = require('express');
           const app = express();
           console.log('? Express module loaded');
@@ -225,14 +216,9 @@ EOF
     - name: Test Docker image
       run: |
         echo "=== Testing Docker Build ==="
-        
-        # Check if image was built
         docker images kubefeeds:test
-        
-        # Quick container test (without running full app)
         docker run --rm kubefeeds:test node --version
         docker run --rm kubefeeds:test npm --version
-        
         echo "? Docker image builds and runs correctly"
 
   feed-refresh:
@@ -257,14 +243,13 @@ EOF
       run: |
         mkdir -p public
         if [ ! -f "public/index.html" ]; then
-          echo "<!DOCTYPE html><html><head><title>KubeFeeds</title></head><body><h1>KubeFeeds</h1><p>Kubernetes News Aggregator</p></body></html>" > public/index.html
+          echo '<!DOCTYPE html><html><head><title>KubeFeeds</title></head><body><h1>KubeFeeds</h1><p>Kubernetes News Aggregator</p></body></html>' > public/index.html
         fi
     
     - name: Test feed sources
       run: |
         echo "=== Testing Feed Sources ==="
         
-        # Test some main Kubernetes feeds
         feeds=(
           "https://kubernetes.io/feed.xml"
           "https://www.cncf.io/feed/"
@@ -285,7 +270,6 @@ EOF
       run: |
         echo "=== Feed Processing Simulation ==="
         
-        # Test RSS parsing with real feed
         node -e "
           const Parser = require('rss-parser');
           const parser = new Parser();
@@ -298,7 +282,6 @@ EOF
               console.log('Feed title:', feed.title);
               console.log('Items found:', feed.items.length);
               
-              // Check for Kubernetes-related content
               const k8sItems = feed.items.filter(item => 
                 /kubernetes|k8s|container/i.test(item.title + ' ' + (item.summary || ''))
               );
@@ -307,14 +290,14 @@ EOF
               console.log('? Feed processing simulation successful');
             })
             .catch(err => {
-              console.log('?? Feed parsing test completed with note:', err.message.substring(0, 100));
+              console.log('?? Feed parsing test note:', err.message.substring(0, 100));
               console.log('This is normal in CI environment');
             });
         " || echo "Feed test completed"
 
   summary:
     name: Workflow Summary
-    needs: [validate, build-test, feed-refresh]
+    needs: [validate]
     runs-on: ubuntu-latest
     if: always()
     
@@ -328,18 +311,8 @@ EOF
         echo "| Job | Status | Description |" >> $GITHUB_STEP_SUMMARY
         echo "|-----|--------|-------------|" >> $GITHUB_STEP_SUMMARY
         echo "| Validate | ${{ needs.validate.result }} | Project structure and dependencies |" >> $GITHUB_STEP_SUMMARY
-        
-        if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
-          echo "| Build Test | ${{ needs.build-test.result }} | Docker image build validation |" >> $GITHUB_STEP_SUMMARY
-        fi
-        
-        if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event.inputs.force_refresh }}" = "true" ]; then
-          echo "| Feed Refresh | ${{ needs.feed-refresh.result }} | Kubernetes feeds processing |" >> $GITHUB_STEP_SUMMARY
-        fi
-        
         echo "" >> $GITHUB_STEP_SUMMARY
         
-        # Overall status
         if [ "${{ needs.validate.result }}" = "success" ]; then
           echo "## ? Overall Status: SUCCESS" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -347,31 +320,15 @@ EOF
         else
           echo "## ? Overall Status: ISSUES DETECTED" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Please review the failed jobs above and check the logs for details." >> $GITHUB_STEP_SUMMARY
+          echo "Please review the failed jobs above." >> $GITHUB_STEP_SUMMARY
         fi
         
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "## ? Quick Start Guide" >> $GITHUB_STEP_SUMMARY
+        echo "## ? Quick Start" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### Local Development" >> $GITHUB_STEP_SUMMARY
         echo '```bash' >> $GITHUB_STEP_SUMMARY
         echo "git clone https://github.com/${{ github.repository }}.git" >> $GITHUB_STEP_SUMMARY
         echo "cd kubefeeds" >> $GITHUB_STEP_SUMMARY
-        echo "npm install" >> $GITHUB_STEP_SUMMARY
-        echo "npm start" >> $GITHUB_STEP_SUMMARY
+        echo "npm install && npm start" >> $GITHUB_STEP_SUMMARY
         echo "# Visit http://localhost:3000" >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### Docker Deployment" >> $GITHUB_STEP_SUMMARY
-        echo '```bash' >> $GITHUB_STEP_SUMMARY
-        echo "docker build -t kubefeeds ." >> $GITHUB_STEP_SUMMARY
-        echo "docker run -p 3000:3000 kubefeeds" >> $GITHUB_STEP_SUMMARY
-        echo '```' >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### Quick Deploy Script" >> $GITHUB_STEP_SUMMARY
-        echo '```bash' >> $GITHUB_STEP_SUMMARY
-        echo "curl -sSL https://raw.githubusercontent.com/${{ github.repository }}/main/start.sh | bash" >> $GITHUB_STEP_SUMMARY
-        echo '```' >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "---" >> $GITHUB_STEP_SUMMARY
-        echo "**Trigger**: ${{ github.event_name }} | **Branch**: ${{ github.ref_name }} | **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
