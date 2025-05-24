@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KubeFeeds - Kubernetes News Aggregator</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh; color: #333;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+        .header { 
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 1rem 0; position: sticky; top: 0; z-index: 1000;
+        }
+        .header-content { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+        .logo { display: flex; align-items: center; gap: 0.5rem; font-size: 1.8rem; font-weight: bold; color: #4f46e5; }
+        .logo i { font-size: 2rem; }
+        .main-content { padding: 2rem 0; text-align: center; color: white; }
+        .loading { font-size: 1.2rem; margin: 2rem 0; }
+        .loading i { font-size: 2rem; animation: spin 1s linear infinite; margin-right: 10px; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .articles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 1.5rem; margin-top: 2rem; }
+        .article-card { 
+            background: rgba(255, 255, 255, 0.95); border-radius: 12px; padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); transition: all 0.3s;
+        }
+        .article-card:hover { transform: translateY(-4px); box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15); }
+        .article-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 0.5rem; color: #1f2937; }
+        .article-title a { color: inherit; text-decoration: none; }
+        .article-title a:hover { color: #4f46e5; }
+        .article-meta { display: flex; justify-content: space-between; margin-bottom: 1rem; font-size: 0.875rem; color: #6b7280; }
+        .article-source { background: #e0e7ff; color: #3730a3; padding: 0.25rem 0.75rem; border-radius: 20px; font-weight: 500; }
+        .article-abstract { color: #4b5563; line-height: 1.6; margin-bottom: 1rem; }
+        .stats { display: flex; justify-content: center; gap: 2rem; margin: 2rem 0; }
+        .stat-item { text-align: center; color: white; }
+        .stat-number { font-size: 2rem; font-weight: bold; }
+        .stat-label { font-size: 1rem; opacity: 0.8; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fab fa-kubernetes"></i>
+                    <span>KubeFeeds</span>
+                </div>
+                <div style="color: #666;">Kubernetes News Aggregator</div>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="container">
+            <div class="loading">
+                <i class="fas fa-spinner"></i>
+                Loading Kubernetes feeds...
+            </div>
+            
+            <div class="stats" id="stats" style="display: none;">
+                <div class="stat-item">
+                    <div class="stat-number" id="total-articles">0</div>
+                    <div class="stat-label">Total Articles</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="total-sources">0</div>
+                    <div class="stat-label">Sources</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="today-articles">0</div>
+                    <div class="stat-label">Today</div>
+                </div>
+            </div>
+            
+            <div class="articles-grid" id="articles"></div>
+        </div>
+    </main>
+
+    <script>
+        async function loadData() {
+            try {
+                // Load statistics
+                const statsRes = await fetch('/api/stats');
+                const stats = await statsRes.json();
+                
+                document.getElementById('total-articles').textContent = stats.total_articles || 0;
+                document.getElementById('total-sources').textContent = stats.total_sources || 0;
+                document.getElementById('today-articles').textContent = stats.today_articles || 0;
+                document.getElementById('stats').style.display = 'flex';
+                
+                // Load articles
+                const articlesRes = await fetch('/api/articles?limit=12');
+                const data = await articlesRes.json();
+                
+                const articlesContainer = document.getElementById('articles');
+                const loadingContainer = document.querySelector('.loading');
+                
+                if (data.articles && data.articles.length > 0) {
+                    loadingContainer.style.display = 'none';
+                    
+                    data.articles.forEach(article => {
+                        const articleElement = document.createElement('div');
+                        articleElement.className = 'article-card';
+                        articleElement.innerHTML = `
+                            <h2 class="article-title">
+                                <a href="${article.link}" target="_blank" rel="noopener noreferrer">
+                                    ${article.title}
+                                </a>
+                            </h2>
+                            <div class="article-meta">
+                                <span class="article-source">${article.source}</span>
+                                <span>${new Date(article.published).toLocaleDateString()}</span>
+                            </div>
+                            <p class="article-abstract">
+                                ${article.abstract || 'No abstract available.'}
+                            </p>
+                        `;
+                        articlesContainer.appendChild(articleElement);
+                    });
+                } else {
+                    loadingContainer.innerHTML = '<p>No articles found yet. The feeds are being processed...</p>';
+                }
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.querySelector('.loading').innerHTML = '<p>Error loading feeds. Please try refreshing the page.</p>';
+            }
+        }
+        
+        // Load data when page loads
+        document.addEventListener('DOMContentLoaded', loadData);
+        
+        // Auto-refresh every 30 seconds
+        setInterval(loadData, 30000);
+    </script>
+</body>
+</html>
