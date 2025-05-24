@@ -1,0 +1,92 @@
+name: ? Bug Report
+description: Report a bug to help us improve KubeFeeds
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report! 
+        
+        Before submitting, please check the [Troubleshooting Guide](https://github.com/collabnix/kubefeeds/blob/main/TROUBLESHOOTING.md) for common solutions.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the bug and what you expected to happen.
+      placeholder: Tell us what you see!
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which part of KubeFeeds is affected?
+      options:
+        - Frontend (Web Interface)
+        - Backend (API/Server)
+        - Feed Processing
+        - Docker/Deployment
+        - GitHub Actions/CI
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this issue?
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Please provide your environment details
+      placeholder: |
+        - OS: [e.g. Ubuntu 20.04, macOS 12.1, Windows 11]
+        - Node.js version: [run `node --version`]
+        - npm version: [run `npm --version`]
+        - Browser: [if applicable]
+        - Docker version: [if using Docker]
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Please provide relevant logs or error messages
+      placeholder: |
+        Paste logs here (check kubefeeds.log or browser console)
+      render: shell
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: Add any other context about the problem here
+      placeholder: Screenshots, configuration files, etc.
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Checklist
+      description: Please confirm the following
+      options:
+        - label: I have checked the [Troubleshooting Guide](https://github.com/collabnix/kubefeeds/blob/main/TROUBLESHOOTING.md)
+          required: true
+        - label: I have searched for existing issues
+          required: true
+        - label: I have provided all the requested information
+          required: true
