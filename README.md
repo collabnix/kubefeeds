@@ -1,11 +1,11 @@
-# ? KubeFeeds - Kubernetes News Aggregator
+# KubeFeeds - Kubernetes News Aggregator
 
 [![CI/CD](https://github.com/collabnix/kubefeeds/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/collabnix/kubefeeds/actions/workflows/ci-cd.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > **A comprehensive portal that aggregates Kubernetes-related content from various RSS feeds and displays article abstracts in a beautiful, responsive interface.**
 
-## ? Features
+## Features
 
 - ? **Automated Feed Aggregation**: Fetches from 8+ popular Kubernetes blogs and news sources
 - ? **Smart Content Filtering**: Only shows Kubernetes-related content using intelligent keyword detection
@@ -18,24 +18,10 @@
 - ? **Docker Ready**: Easy deployment with Docker and Kubernetes
 - ? **Automated Updates**: GitHub Actions keep feeds updated automatically
 
-## ? Live Demo
+## Live Demo
 
 Visit the portal locally after setup: **http://localhost:3000**
 
-## ? Default Sources
-
-KubeFeeds aggregates content from these popular sources:
-
-| Source | Focus Area |
-|--------|------------|
-| **Kubernetes Blog** | Official K8s updates |
-| **CNCF Blog** | Cloud Native ecosystem |
-| **Docker Blog** | Container technology |
-| **Red Hat OpenShift** | Enterprise Kubernetes |
-| **Platform9** | Managed Kubernetes |
-| **Rancher** | K8s management platform |
-| **Aqua Security** | Container security |
-| **Sysdig** | Monitoring & security |
 
 ## ? Quick Start
 
