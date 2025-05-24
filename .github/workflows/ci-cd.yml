@@ -1,4 +1,4 @@
-name: ? KubeFeeds Basic CI
+name: KubeFeeds Basic CI
 
 on:
   push:
@@ -12,10 +12,10 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: ? Checkout code
+    - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: ? List files
+    - name: List files
       run: |
         echo "Repository contents:"
         ls -la
@@ -42,86 +42,86 @@ jobs:
           echo "? README.md missing"
         fi
     
-    - name: ? Setup Node.js
+    - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
     
-    - name: ? Verify Node.js setup
+    - name: Verify Node.js setup
       run: |
         echo "Node.js version:"
         node --version
         echo "npm version:"
         npm --version
-        echo "? Node.js setup successful"
+        echo "Node.js setup successful"
     
-    - name: ? Check package.json validity
+    - name: Check package.json validity
       run: |
         if [ -f "package.json" ]; then
           echo "Validating package.json..."
           node -e "
             try {
               const pkg = require('./package.json');
-              console.log('? package.json is valid JSON');
+              console.log('package.json is valid JSON');
               console.log('Name:', pkg.name || 'Not specified');
               console.log('Version:', pkg.version || 'Not specified');
               console.log('Main file:', pkg.main || 'Not specified');
               process.exit(0);
             } catch (error) {
-              console.error('? package.json validation failed:', error.message);
+              console.error('package.json validation failed:', error.message);
               process.exit(1);
             }
           "
         else
-          echo "?? package.json not found"
+          echo "package.json not found"
         fi
     
-    - name: ? Basic project validation
+    - name: Basic project validation
       run: |
-        echo "? All basic validations completed successfully!"
+        echo "All basic validations completed successfully!"
         echo ""
-        echo "? Summary:"
+        echo "Summary:"
         echo "- Repository: ${{ github.repository }}"
         echo "- Branch: ${{ github.ref_name }}"
         echo "- Commit: ${{ github.sha }}"
         echo "- Event: ${{ github.event_name }}"
         echo ""
-        echo "? Project structure looks good!"
+        echo "Project structure looks good!"
 
   simple-test:
     needs: basic-validation
     runs-on: ubuntu-latest
     
     steps:
-    - name: ? Checkout code
+    - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: ? Setup Node.js
+    - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
     
-    - name: ? Test npm install
+    - name: Test npm install
       run: |
         echo "Testing npm install..."
         npm install --verbose
-        echo "? npm install successful"
+        echo "npm install successful"
     
-    - name: ? Verify installation
+    - name: Verify installation
       run: |
         echo "Checking node_modules..."
         if [ -d "node_modules" ]; then
-          echo "? node_modules directory created"
+          echo "node_modules directory created"
           echo "Installed packages:"
           ls node_modules | head -10
         else
-          echo "? node_modules not found"
+          echo "node_modules not found"
           exit 1
         fi
     
-    - name: ? Success
+    - name: Success
       run: |
-        echo "? All tests passed!"
+        echo "All tests passed!"
         echo ""
         echo "The KubeFeeds project is ready for development."
         echo ""
