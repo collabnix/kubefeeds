@@ -1,0 +1,3 @@
+# Test commit to trigger workflow
+
+Testing GitHub Actions - simplified workflows
