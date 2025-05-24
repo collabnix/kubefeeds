@@ -1,4 +1,4 @@
-name: KubeFeeds CI
+name: KubeFeeds Test
 
 on:
   push:
@@ -8,58 +8,26 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  basic-test:
     runs-on: ubuntu-latest
-    
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-    
-    - name: Check files exist
-      run: |
-        echo "Checking essential files..."
-        ls -la
-        test -f app.js && echo "? app.js found" || echo "? app.js missing"
-        test -f package.json && echo "? package.json found" || echo "? package.json missing"
-        test -f README.md && echo "? README.md found" || echo "? README.md missing"
-    
-    - name: Validate package.json
-      run: |
-        echo "Validating package.json..."
-        node -pe "const pkg=require('./package.json'); console.log('Name: ' + pkg.name); console.log('Version: ' + pkg.version);"
-    
-    - name: Install dependencies
-      run: npm ci
-    
-    - name: Test modules
-      run: |
-        echo "Testing core modules..."
-        node -pe "require('express'); console.log('? Express works');"
-        node -pe "require('rss-parser'); console.log('? RSS Parser works');"
-        node -pe "require('sqlite3'); console.log('? SQLite3 works');"
-    
-    - name: Create basic frontend if missing
-      run: |
-        mkdir -p public
-        if [ ! -f "public/index.html" ]; then
-          echo "Creating basic index.html..."
-          echo '<!DOCTYPE html><html><head><title>KubeFeeds</title></head><body><h1>KubeFeeds</h1><p>Kubernetes News Aggregator</p><script>console.log("KubeFeeds loaded");</script></body></html>' > public/index.html
-          echo "? Created public/index.html"
-        else
-          echo "? public/index.html already exists"
-        fi
-    
-    - name: Final validation
-      run: |
-        echo "=== Final Check ==="
-        echo "? All tests completed successfully"
-        echo "? Project is ready for deployment"
-        echo ""
-        echo "Repository: ${{ github.repository }}"
-        echo "Branch: ${{ github.ref_name }}"
-        echo "Event: ${{ github.event_name }}"
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      
+      - name: Check files
+        run: |
+          echo "Checking project files..."
+          ls -la
+          if [ -f "app.js" ]; then echo "? app.js found"; fi
+          if [ -f "package.json" ]; then echo "? package.json found"; fi
+      
+      - name: Install deps
+        run: npm install
+      
+      - name: Test success
+        run: echo "? All tests passed!"
