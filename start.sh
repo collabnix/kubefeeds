@@ -31,114 +31,179 @@ print_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Check if Docker is installed
-check_docker() {
-    if command -v docker &> /dev/null; then
-        print_success "Docker found: $(docker --version)"
-        return 0
-    else
-        print_error "Docker not found. Please install Docker first."
-        echo "Visit: https://docs.docker.com/get-docker/"
-        return 1
-    fi
-}
-
-# Check if Docker Compose is available
-check_docker_compose() {
-    if command -v docker-compose &> /dev/null; then
-        print_success "Docker Compose found: $(docker-compose --version)"
-        return 0
-    elif docker compose version &> /dev/null; then
-        print_success "Docker Compose found: $(docker compose version)"
-        return 0
-    else
-        print_warning "Docker Compose not found, using docker run instead"
-        return 1
-    fi
-}
-
-# Start with Docker Compose
-start_with_compose() {
-    print_status "Starting KubeFeeds with Docker Compose..."
-    
-    if command -v docker-compose &> /dev/null; then
-        docker-compose up -d
-    else
-        docker compose up -d
-    fi
-    
-    print_success "KubeFeeds started with Docker Compose!"
-}
-
-# Start with Docker run
-start_with_docker() {
-    print_status "Starting KubeFeeds with Docker..."
-    
-    # Stop existing container if running
-    docker stop kubefeeds 2>/dev/null || true
-    docker rm kubefeeds 2>/dev/null || true
-    
-    # Run the container
-    docker run -d \
-        --name kubefeeds \
-        -p 3000:3000 \
-        -v kubefeeds-data:/app/data \
-        --restart unless-stopped \
-        collabnix/kubefeeds:latest
-    
-    print_success "KubeFeeds started with Docker!"
-}
-
-# Check if container is healthy
-check_health() {
-    print_status "Checking application health..."
-    
-    # Wait a moment for the app to start
-    sleep 10
-    
-    if curl -s http://localhost:3000/api/stats > /dev/null; then
-        print_success "? KubeFeeds is running and healthy!"
-        print_status "? Visit: http://localhost:3000"
-        print_status "? API: http://localhost:3000/api/stats"
-        return 0
-    else
-        print_error "? Application doesn't seem to be responding"
-        print_status "Check logs with: docker logs kubefeeds"
-        return 1
-    fi
-}
-
-# Main function
-main() {
-    echo
-    print_status "KubeFeeds - Kubernetes News Aggregator"
-    print_status "Repository: https://github.com/collabnix/kubefeeds"
-    echo
-    
-    # Check prerequisites
-    if ! check_docker; then
+# Check if Node.js is installed
+check_nodejs() {
+    print_status "Checking Node.js installation..."
+    if ! command -v node &> /dev/null; then
+        print_error "Node.js is not installed. Please install Node.js 16+ first."
+        echo "Visit: https://nodejs.org/en/download/"
         exit 1
     fi
     
-    # Choose deployment method
-    if check_docker_compose && [ -f "docker-compose.yml" ]; then
-        start_with_compose
-    else
-        start_with_docker
+    NODE_VERSION=$(node --version | cut -d'v' -f2 | cut -d'.' -f1)
+    if [ "$NODE_VERSION" -lt 16 ]; then
+        print_error "Node.js version 16+ required. Current version: $(node --version)"
+        exit 1
     fi
     
-    # Health check
-    check_health
+    print_success "Node.js $(node --version) found"
+}
+
+# Check if npm is installed
+check_npm() {
+    print_status "Checking npm installation..."
+    if ! command -v npm &> /dev/null; then
+        print_error "npm is not installed."
+        exit 1
+    fi
+    print_success "npm $(npm --version) found"
+}
+
+# Setup project files
+setup_project() {
+    print_status "Setting up project files..."
+    
+    # Create public directory if it doesn't exist
+    if [ ! -d "public" ]; then
+        mkdir -p public
+        print_status "Created public directory"
+    fi
+    
+    # Ensure index.html exists
+    if [ ! -f "public/index.html" ]; then
+        print_warning "Frontend file missing, using existing or creating basic version"
+    else
+        print_success "Frontend files ready"
+    fi
+    
+    # Check essential files
+    essential_files=("app.js" "package.json")
+    for file in "${essential_files[@]}"; do
+        if [ ! -f "$file" ]; then
+            print_error "$file not found. Please ensure all files are present."
+            exit 1
+        fi
+    done
+    
+    print_success "Project files verified"
+}
+
+# Install dependencies
+install_dependencies() {
+    print_status "Installing dependencies..."
+    
+    if [ ! -f "package.json" ]; then
+        print_error "package.json not found. Please ensure all files are in the correct location."
+        exit 1
+    fi
+    
+    npm install
+    print_success "Dependencies installed"
+}
+
+# Check if port is available
+check_port() {
+    PORT=${1:-3000}
+    print_status "Checking if port $PORT is available..."
+    
+    if command -v lsof &> /dev/null && lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null; then
+        print_warning "Port $PORT is already in use"
+        print_status "Trying to stop any existing KubeFeeds processes..."
+        
+        # Try to stop existing processes
+        pkill -f "node.*app.js" 2>/dev/null || true
+        sleep 2
+        
+        if lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null; then
+            print_error "Port $PORT is still in use. Please stop the existing service or use a different port."
+            return 1
+        fi
+    fi
+    
+    print_success "Port $PORT is available"
+}
+
+# Start application
+start_application() {
+    print_status "Starting KubeFeeds application..."
+    
+    # Check port availability
+    check_port 3000 || exit 1
+    
+    print_status "Starting application in background..."
+    nohup npm start > kubefeeds.log 2>&1 &
+    APP_PID=$!
+    echo $APP_PID > kubefeeds.pid
+    
+    print_status "Application started with PID: $APP_PID"
+    print_status "Waiting for application to initialize..."
+    
+    # Wait for application to start
+    MAX_ATTEMPTS=20
+    ATTEMPT=1
+    
+    while [ $ATTEMPT -le $MAX_ATTEMPTS ]; do
+        if curl -s http://localhost:3000/api/stats > /dev/null 2>&1; then
+            print_success "? KubeFeeds is running and responding!"
+            break
+        fi
+        
+        if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
+            print_error "? Application failed to start after $MAX_ATTEMPTS attempts"
+            print_status "Check logs: tail -f kubefeeds.log"
+            return 1
+        fi
+        
+        echo -n "."
+        sleep 2
+        ATTEMPT=$((ATTEMPT + 1))
+    done
+    
+    echo ""
+}
+
+# Verify deployment
+verify_deployment() {
+    print_status "Verifying deployment..."
+    
+    # Test API endpoints
+    if curl -s http://localhost:3000/api/stats > /dev/null; then
+        print_success "? API endpoints are working"
+    else
+        print_warning "?? API endpoints not responding yet"
+    fi
+    
+    # Test main page
+    if curl -s http://localhost:3000/ | grep -i "kubefeeds" > /dev/null 2>&1; then
+        print_success "? Main page is working"
+    else
+        print_warning "?? Main page not responding properly yet"
+    fi
+}
+
+# Main deployment process
+main() {
+    echo
+    print_status "Starting KubeFeeds deployment process..."
+    echo
+    
+    check_nodejs
+    check_npm
+    setup_project
+    install_dependencies
+    start_application
+    verify_deployment
     
     echo
-    print_success "? KubeFeeds is now running!"
+    print_success "? KubeFeeds deployment completed!"
     echo
     echo "????????????????????????????????????????????????????????????????????????????"
     echo "? Access your portal: http://localhost:3000"
     echo "? API endpoint: http://localhost:3000/api/stats"
-    echo "? Stop: docker stop kubefeeds"
-    echo "? Logs: docker logs -f kubefeeds"
-    echo "? Refresh feeds: curl -X POST http://localhost:3000/api/refresh"
+    echo "? Logs: tail -f kubefeeds.log"
+    echo "? Stop: ./start.sh stop"
+    echo "? Restart: ./start.sh restart"
+    echo "? Status: ./start.sh status"
     echo "????????????????????????????????????????????????????????????????????????????"
     echo
     print_status "The application will automatically start fetching Kubernetes feeds!"
@@ -150,38 +215,53 @@ main() {
 case "${1:-}" in
     "stop")
         print_status "Stopping KubeFeeds..."
-        docker stop kubefeeds 2>/dev/null || true
-        if [ -f "docker-compose.yml" ]; then
-            if command -v docker-compose &> /dev/null; then
-                docker-compose down
-            else
-                docker compose down
-            fi
+        if [ -f kubefeeds.pid ]; then
+            PID=$(cat kubefeeds.pid)
+            kill $PID 2>/dev/null || true
+            rm -f kubefeeds.pid
+            print_success "KubeFeeds stopped"
+        else
+            pkill -f "node.*app.js" 2>/dev/null || true
+            print_success "KubeFeeds processes stopped"
         fi
-        print_success "KubeFeeds stopped"
-        ;;
-    "logs")
-        docker logs -f kubefeeds
         ;;
     "restart")
         print_status "Restarting KubeFeeds..."
-        docker restart kubefeeds
-        print_success "KubeFeeds restarted"
+        $0 stop
+        sleep 3
+        $0
         ;;
     "status")
-        if curl -s http://localhost:3000/api/stats > /dev/null; then
-            print_success "KubeFeeds is running"
+        print_status "Checking KubeFeeds status..."
+        if curl -s http://localhost:3000/api/stats > /dev/null 2>&1; then
+            print_success "? KubeFeeds is running"
+            echo "? Stats: $(curl -s http://localhost:3000/api/stats)"
         else
-            print_error "KubeFeeds is not responding"
+            print_error "? KubeFeeds is not responding"
+            if [ -f kubefeeds.pid ]; then
+                print_status "PID file exists: $(cat kubefeeds.pid)"
+            fi
         fi
         ;;
-    "update")
-        print_status "Updating KubeFeeds..."
-        docker pull collabnix/kubefeeds:latest
-        docker stop kubefeeds 2>/dev/null || true
-        docker rm kubefeeds 2>/dev/null || true
-        start_with_docker
-        check_health
+    "logs")
+        if [ -f kubefeeds.log ]; then
+            tail -f kubefeeds.log
+        else
+            print_error "Log file not found"
+        fi
+        ;;
+    "help"|"-h"|"--help")
+        echo "KubeFeeds Quick Start Script"
+        echo ""
+        echo "Usage: $0 [command]"
+        echo ""
+        echo "Commands:"
+        echo "  (no command)  Start KubeFeeds"
+        echo "  stop          Stop KubeFeeds"
+        echo "  restart       Restart KubeFeeds"
+        echo "  status        Check if KubeFeeds is running"
+        echo "  logs          View application logs"
+        echo "  help          Show this help message"
         ;;
     *)
         main
